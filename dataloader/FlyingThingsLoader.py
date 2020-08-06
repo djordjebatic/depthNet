@@ -1,12 +1,12 @@
-from python_pfm import readPFM
 from torch.utils.data import Dataset
 from PIL import Image
-from python_pfm import *
+import numpy as np
+from .python_pfm import *
 from torchvision import transforms
-from preprocessing import *
 
-IMAGENET_MEAN_1 = np.array([0.485, 0.456, 0.406])
-IMAGENET_STD_1 = np.array([0.229, 0.224, 0.225]) 
+
+IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
+IMAGENET_STD = np.array([0.229, 0.224, 0.225]) 
 
 def load_disparity(file_path):
     return readPFM(file_path)
@@ -22,7 +22,7 @@ def preprocess_data(image, augment=False):
     else:
         data_transforms = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(IMAGENET_MEAN_1, IMAGENET_STD_1)
+            transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD)
         ])
 
     return data_transforms(image)
@@ -64,7 +64,7 @@ def FlyingThingsDataloader(Dataset):
 
 
 if __name__ == '__main__':
-    
+
     im = load_image('sample_dataset/RGB_cleanpass/left/0006.png')
     print(im.size)
     data, scale = load_disparity("sample_dataset/disparity/0006.pfm")
