@@ -11,11 +11,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 from torchvision import transforms
-import cv2 as cv  # OpenCV
 
 # numeric and plotting libraries
 import numpy as np
-import matplotlib.pyplot as plt
 
 '''
     DispNet:
@@ -50,19 +48,25 @@ import matplotlib.pyplot as plt
     pr1+loss1   3×3     1       32/1        384×192     384×192     iconv1
 '''
 
+def conv_block(in_channels, out_channels, kernel_size, stride):
+    return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding_mode="same", bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+    )
+
+
 class DispNetSimple(nn.Module):
     ''' Simple DispNet, input is stacked.
     '''
     def __init__(self):
-        pass
-
+        super().__init__()
+        
     def forward(self, left, right):
         pass
 
-class DispNetCorr(nn.Module):
-    ''' DispNet with Siamese feature extractors on left and right image
-    + horizontal correlation to join them.
-    '''
+class DispNet(nn.Module):
+
     def __init__(self):
         pass
 
