@@ -55,14 +55,54 @@ def conv_block(in_channels, out_channels, kernel_size, stride):
             nn.ReLU(inplace=True)
     )
 
+def predict_flow(in_planes):
+    # return nn.Conv2d(in_planes,2,kernel_size=3,stride=1,padding=1,bias=True)  # NVIDIA FlowNetS
+    return nn.Conv2d(in_planes,1,kernel_size=3,stride=1,padding=1,bias=True)    # DispNetS
+
+def deconv(in_planes, out_planes):
+    return nn.Sequential(
+        nn.ConvTranspose2d(in_planes, out_planes, kernel_size=4, stride=2, padding=1, bias=False),
+        nn.LeakyReLU(0.1,inplace=True)
+    )
+
 
 class DispNetSimple(nn.Module):
     ''' Simple DispNet, input is stacked.
     '''
     def __init__(self):
         super().__init__()
-        
-    def forward(self, left, right):
+
+        self.conv1 = conv_block(6, 64, 7, 2)
+        self.conv2 = conv_block(64, 128, 5, 2)
+        self.conv3a = conv_block(128, 256, 5, 2)
+        self.conv3b = conv_block(256, 256, 3, 1)
+        self.conv4a = conv_block(256, 512, 3, 2)
+        self.conv4b = conv_block(512, 512, 3, 1)
+        self.conv5a = conv_block(512, 512, 3, 2)
+        self.conv5b = conv_block(512, 512, 3, 1)
+        self.conv6a = conv_block(512, 1024, 3, 2)
+        self.conv6b = conv_block(1024, 1024, 3, 1)
+        self.pr6 = predict_flow(1024)
+        self.pr5 = predict_flow(512)
+        self.pr4 = predict_flow(256)
+        self.pr3 = predict_flow(128)
+        self.pr2 = predict_flow(64)
+        self.pr1 = predict_flow(32)
+        def deconv(in_planes, out_planes):
+
+        self.upconv5 = deconv(1024, 512)
+        self.upconv4 = deconv(512, 256)
+        self.upconv3 = deconv(256, 128)
+        self.upconv2 = deconv(128, 64)
+        self.upconv1 = deconv(64, 32)
+
+        # TODO iconv?
+
+        # TODO try bilinear upsample
+
+    def forward(self, features):
+        # left, right = features
+
         pass
 
 class DispNet(nn.Module):
