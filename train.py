@@ -14,7 +14,7 @@ from PIL import Image
 import numpy as np
 
 
-DEVICE = torch.device("cuda") # Boilerplate code for using CUDA for faster training
+DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 MAX_SUMMARY_IMAGES = 4
 LR = 1e-4
 EPOCHS = 20
