@@ -52,7 +52,7 @@ def conv_block(in_channels, out_channels, kernel_size=3, stride=1):
         nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
                   stride=stride, padding=(kernel_size-1)//2, bias=False),
         nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True)
+        nn.LeakyReLU(0.1, inplace=True)
     )
 
 
@@ -64,7 +64,7 @@ def deconv(in_channels, out_channels, kernel_size=4):
     )
 
 
-def predict_flow(in_channels):
+def predict_disp(in_channels):
     return nn.Conv2d(in_channels, 1, kernel_size=3, stride=1, padding=1, bias=False)
 
 
@@ -92,12 +92,12 @@ class DispNetSimple(nn.Module):
         self.deconv2 = deconv(128,  64)
         self.deconv1 = deconv(64,  32)
 
-        self.predict_flow6 = predict_flow(1024)
-        self.predict_flow5 = predict_flow(512)
-        self.predict_flow4 = predict_flow(256)
-        self.predict_flow3 = predict_flow(128)
-        self.predict_flow2 = predict_flow(64)
-        self.predict_flow1 = predict_flow(32)
+        self.predict_disp6 = predict_disp(1024)
+        self.predict_disp5 = predict_disp(512)
+        self.predict_disp4 = predict_disp(256)
+        self.predict_disp3 = predict_disp(128)
+        self.predict_disp2 = predict_disp(64)
+        self.predict_disp1 = predict_disp(32)
 
         self.upsampled_flow6_to_5 = nn.ConvTranspose2d(1, 1, 4, 2, 1, bias=False)
         self.upsampled_flow5_to_4 = nn.ConvTranspose2d(1, 1, 4, 2, 1, bias=False)
@@ -128,32 +128,32 @@ class DispNetSimple(nn.Module):
         out_conv5b = self.conv5b(self.conv5a(out_conv4b))
         out_conv6b = self.conv6b(self.conv6a(out_conv5b))
 
-        pr6 = self.predict_flow6(out_conv6b)
+        pr6 = self.predict_disp6(out_conv6b)
         pr6_up = self.upsampled_flow6_to_5(pr6)
 
         deconv5 = self.deconv5(out_conv6b)
         iconv5 = self.iconv5(torch.cat([deconv5, pr6_up, out_conv5b], dim=1))
-        pr5 = self.predict_flow5(iconv5)
+        pr5 = self.predict_disp5(iconv5)
         pr5_up = self.upsampled_flow5_to_4(pr5)
 
         deconv4 = self.deconv4(iconv5)
         iconv4 = self.iconv4(torch.cat([deconv4, pr5_up, out_conv4b], dim=1))
-        pr4 = self.predict_flow4(iconv4)
+        pr4 = self.predict_disp4(iconv4)
         pr4_up = self.upsampled_flow4_to_3(pr4)
 
         deconv3 = self.deconv3(iconv4)
         iconv3 = self.iconv3(torch.cat([deconv3, pr4_up, out_conv3b], dim=1))
-        pr3 = self.predict_flow3(iconv3)
+        pr3 = self.predict_disp3(iconv3)
         pr3_up = self.upsampled_flow3_to_2(pr3)
 
         deconv2 = self.deconv2(iconv3)
         iconv2 = self.iconv2(torch.cat([deconv2, pr3_up, out_conv2], dim=1))
-        pr2 = self.predict_flow2(iconv2)
+        pr2 = self.predict_disp2(iconv2)
         pr2_up = self.upsampled_flow2_to_1(pr2)
 
         deconv1 = self.deconv1(iconv2)
-        iconv1 = self.iconv1(torch.cat([deconv1, pr2_up, out_conv1]))
-        pr1 = self.predict_flow1(iconv1)
+        iconv1 = self.iconv1(torch.cat([deconv1, pr2_up, out_conv1], dim=1))
+        pr1 = self.predict_disp1(iconv1)
 
         if self.training:
             return pr1, pr2, pr3, pr4, pr5, pr6
