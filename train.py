@@ -17,10 +17,11 @@ import numpy as np
 DEVICE = torch.device("cuda") # Boilerplate code for using CUDA for faster training
 MAX_SUMMARY_IMAGES = 4
 LR = 1e-4
-EPOCHS = 20
-BATCH_SIZE = 64 
+EPOCHS = 15
+BATCH_SIZE = 16 
 NUM_WORKERS = 8
 LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
+MODEL_PTH = 'saved_models/'
 
 assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
 
@@ -31,16 +32,14 @@ torch.cuda.manual_seed(1)
 #summary_writer = SummaryWriter()
 
 #losses = AverageMeter()
-
-
 def train_sample():
 
     left_imgs_train, right_imgs_train, left_disps_train, left_imgs_test, right_imgs_test, left_disps_test = dataset_loader.load_data()
     print('loaded data')
 
     train_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_train[:100], right_imgs_train[:100], left_disps_train[:100], True),
-        batch_size=64, shuffle=False, drop_last=False
+        FLY.FlyingThingsDataloader(left_imgs_train[:50], right_imgs_train[:50], left_disps_train[:50], True),
+        batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
     )
 
     '''test_loader = torch.utils.data.DataLoader(
@@ -85,18 +84,17 @@ def train_sample():
 
                 losses.update(loss.data.item(), disp_true.size(0))
             '''
-
-            total_train_loss += loss
             
             loss.backward()
             optimizer.step()
-
-        print('Epoch {} loss is: {:.3f}'.format(epoch, loss))
+            
+        torch.save(model.state_dict(), MODEL_PTH + str(epoch) + '_dispnet.pth')
+        total_train_loss += loss
+        print('Epoch {} loss: {:.3f} Time elapsed: {:.3f}'.format(epoch, loss, time.time() - start))
 
     print('Total loss is: {:.3f}'.format(total_train_loss/EPOCHS))
-    end = time.time()
     del model, imgL, imgR, disp_true
-    print('Time elapsed: {:.3f}'.format(end - start))
+    print('Total time elapsed: {:.3f}'.format(time.time() - start))
 
 
 def calculate_loss(output, mask, disp_true):
