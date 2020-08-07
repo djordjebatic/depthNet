@@ -33,9 +33,9 @@ torch.cuda.manual_seed(1)
 #losses = AverageMeter()
 
 
-def train_sample():
-
-    left_imgs_train, right_imgs_train, left_disps_train, left_imgs_test, right_imgs_test, left_disps_test = dataset_loader.load_data()
+def make_data_loaders(root):
+    'Loads the train and val datasets'
+    left_imgs_train, right_imgs_train, left_disps_train, left_imgs_val, right_imgs_val, left_disps_val = dataset_loader.load_data(root)
     print('loaded data')
 
     train_loader = torch.utils.data.DataLoader(
@@ -43,10 +43,16 @@ def train_sample():
         batch_size=64, shuffle=False, drop_last=False
     )
 
-    '''test_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_test[:25], right_imgs_test[:25], left_disps_test[:25], False),
+    val_loader = torch.utils.data.DataLoader(
+        FLY.FlyingThingsDataloader(left_imgs_val[:25], right_imgs_val[:25], left_disps_val[:25], False),
         batch_size=64, shuffle=False, num_workers=4, drop_last=False
-    )'''
+    )
+    return (train_loader, val_loader)
+
+
+def train_sample(root = 'FlyingThings3D_subset'):
+    
+    train_loader, val_loader = make_data_loaders(root)
 
     model = DispNetSimple().to(DEVICE)
     print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
@@ -130,4 +136,6 @@ def calculate_loss(output, mask, disp_true):
 
 if __name__ == '__main__':
     torch.cuda.empty_cache()
-    train_sample()
+
+    root = 'SAMPLE_BATCH'
+    train_sample(root)
