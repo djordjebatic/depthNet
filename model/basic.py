@@ -152,7 +152,7 @@ class DispNetSimple(nn.Module):
         pr2_up = self.upsampled_flow2_to_1(pr2)
 
         deconv1 = self.deconv1(iconv2)
-        iconv1 = self.iconv1(torch.cat([deconv1, pr2_up, out_conv1]))
+        iconv1 = self.iconv1(torch.cat([deconv1, pr2_up, out_conv1]), dim=1)
         pr1 = self.predict_flow1(iconv1)
 
         if self.training:
