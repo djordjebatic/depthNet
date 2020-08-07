@@ -45,7 +45,7 @@ class FlyingThingsDataloader(Dataset):
         left_img = load_image(left_image_path)#/256
         right_img = load_image(right_image_path)#/256
         data, _ = readPFM(disparity_path)
-        data = np.ascontiguousarray(data, dtype=np.float32)#/256
+        data = np.ascontiguousarray(data, dtype=np.float32)/256
 
         if self.train:
             w, h = left_img.size

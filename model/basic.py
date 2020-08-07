@@ -119,6 +119,7 @@ class DispNetSimple(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 constant_(m.weight, 1)
                 constant_(m.bias, 0)
+        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear')
 
     def forward(self, x):
         out_conv1 = self.conv1(x)
@@ -155,7 +156,11 @@ class DispNetSimple(nn.Module):
         iconv1 = self.iconv1(torch.cat([deconv1, pr2_up, out_conv1], dim=1))
         pr1 = self.predict_disp1(iconv1)
 
+        pr1 = self.upsample(pr1)
+        
         if self.training:
             return pr1, pr2, pr3, pr4, pr5, pr6
         else:
             return pr1
+        
+        
