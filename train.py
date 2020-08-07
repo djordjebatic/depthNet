@@ -17,10 +17,16 @@ import numpy as np
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 MAX_SUMMARY_IMAGES = 4
 LR = 1e-4
+<<<<<<< HEAD
 EPOCHS = 20
 BATCH_SIZE = 64
+=======
+EPOCHS = 15
+BATCH_SIZE = 16 
+>>>>>>> fd27ba22994e960c5c476ecdd92c8fdc02e80721
 NUM_WORKERS = 8
 LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
+MODEL_PTH = 'saved_models/'
 
 assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
 
@@ -28,14 +34,13 @@ torch.manual_seed(1)
 torch.cuda.manual_seed(1)
 
 
-
 def make_data_loaders(root):
     'Loads the train and val datasets'
     left_imgs_train, right_imgs_train, left_disps_train, left_imgs_val, right_imgs_val, left_disps_val = dataset_loader.load_data(root)
 
     train_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_train[:100], right_imgs_train[:100], left_disps_train[:100], True),
-        batch_size=64, shuffle=False, drop_last=False
+        FLY.FlyingThingsDataloader(left_imgs_train[:50], right_imgs_train[:50], left_disps_train[:50], True),
+        batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
     )
 
     val_loader = torch.utils.data.DataLoader(
@@ -121,18 +126,23 @@ def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThing
 
                 losses.update(loss.data.item(), disp_true.size(0))
             '''
+<<<<<<< HEAD
 
             total_train_loss += loss
 
+=======
+            
+>>>>>>> fd27ba22994e960c5c476ecdd92c8fdc02e80721
             loss.backward()
             optimizer.step()
-
-        print('Epoch {} loss is: {:.3f}'.format(epoch, loss))
+            
+        torch.save(model.state_dict(), MODEL_PTH + str(epoch) + '_dispnet.pth')
+        total_train_loss += loss
+        print('Epoch {} loss: {:.3f} Time elapsed: {:.3f}'.format(epoch, loss, time.time() - start))
 
     print('Total loss is: {:.3f}'.format(total_train_loss/EPOCHS))
-    end = time.time()
     del model, imgL, imgR, disp_true
-    print('Time elapsed: {:.3f}'.format(end - start))
+    print('Total time elapsed: {:.3f}'.format(time.time() - start))
 
 
 
