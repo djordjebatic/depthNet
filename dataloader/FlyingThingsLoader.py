@@ -1,13 +1,13 @@
 from torch.utils.data import Dataset
 from PIL import Image
 import numpy as np
-from .python_pfm import *
 from torchvision import transforms
+import re
 
 
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
 IMAGENET_STD = np.array([0.229, 0.224, 0.225]) 
-
+    
 def load_disparity(file_path):
     return readPFM(file_path)
 
@@ -27,7 +27,7 @@ def preprocess_data(image, augment=False):
 
     return data_transforms(image)
 
-def FlyingThingsDataloader(Dataset):
+class FlyingThingsDataloader(Dataset):
 
     def __init__(self, left_images, right_images, left_disparities, train):
         self.left_images = left_images
@@ -41,10 +41,10 @@ def FlyingThingsDataloader(Dataset):
         right_image_path = self.right_images[index]
         disparity_path = self.left_disparities[index]
 
-        left_img = load_image(left_image_path)/256
-        right_img = load_image(right_image_path)/256
+        left_img = load_image(left_image_path)#/256
+        right_img = load_image(right_image_path)#/256
         data, _ = readPFM(disparity_path)
-        data = np.ascontiguousarray(data, dtype=np.float32)/256
+        data = np.ascontiguousarray(data, dtype=np.float32)#/256
 
         if self.train:
 
@@ -60,14 +60,50 @@ def FlyingThingsDataloader(Dataset):
             return left_img, right_img, data
 
     def __len__(self):
-        return len(self.left_image)
+        return len(self.left_images)
 
+def readPFM(file):
+    file = open(file, 'rb')
 
+    color = None
+    width = None
+    height = None
+    scale = None
+    endian = None
+
+    header = file.readline().decode('utf-8').rstrip()
+    if header == 'PF':
+        color = True
+    elif header == 'Pf':
+        color = False
+    else:
+        raise Exception('Not a PFM file.')
+
+    dim_match = re.match(r'^(\d+)\s(\d+)\s$', file.readline().decode('utf-8'))
+    if dim_match:
+        width, height = map(int, dim_match.groups())
+    else:
+        raise Exception('Malformed PFM header.')
+
+    scale = float(file.readline().decode('utf-8').rstrip())
+    if scale < 0: # little-endian
+        endian = '<'
+        scale = -scale
+    else:
+        endian = '>' # big-endian
+
+    data = np.fromfile(file, endian + 'f')
+    shape = (height, width, 3) if color else (height, width)
+
+    data = np.reshape(data, shape)
+    data = np.flipud(data)
+    return data, scale
+'''
 if __name__ == '__main__':
 
     im = load_image('sample_dataset/RGB_cleanpass/left/0006.png')
     print(im.size)
     data, scale = load_disparity("sample_dataset/disparity/0006.pfm")
     data = np.asarray(data)
-    print(data.shape)
+    print(data.shape)'''
 

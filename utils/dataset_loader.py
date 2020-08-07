@@ -17,7 +17,10 @@ def load_data():
     right_images_test = []
     left_disps_test = []
 
-    for i in ['train', 'val']:
+    for count, i in enumerate(['train', 'val']):
+        if count > 150:
+            break
+
         img_l = os.listdir(root + '/' + i + '/image_clean/left/')
 
         for img in img_l:
@@ -33,7 +36,9 @@ def load_data():
                     right_images_train.append(root + '/' + i + '/image_clean/right/' + img)
                 else:
                     right_images_test.append(root + '/' + i + '/image_clean/right/' + img)
-            
+        
+        count += 1
+
 
     return left_images_train, right_images_train, left_disps_train, left_images_test, right_images_test, left_disps_test
 
