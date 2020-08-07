@@ -42,13 +42,15 @@ class FlyingThingsDataloader(Dataset):
         right_image_path = self.right_images[index]
         disparity_path = self.left_disparities[index]
 
-        left_img = load_image(left_image_path)#/256
-        right_img = load_image(right_image_path)#/256
+        left_img = load_image(left_image_path)
+        right_img = load_image(right_image_path)
+        
+        w, h = left_img.size
+
         data, _ = readPFM(disparity_path)
-        data = np.ascontiguousarray(data, dtype=np.float32)/256
+        data = np.ascontiguousarray(data, dtype=np.float32)/w
 
         if self.train:
-            w, h = left_img.size
             th, tw = 256, 512
 
             x1 = random.randint(0, w - tw)
@@ -59,23 +61,18 @@ class FlyingThingsDataloader(Dataset):
 
             data = data[y1:y1 + th, x1:x1 + tw]
 
-            left_img = preprocess_data(left_img)
-            right_img = preprocess_data(right_img)
-
-            return left_img, right_img, data
         else:
-
-            w, h = left_img.size
             left_img = left_img.crop((w - 960, h - 544, w, h))
             right_img = right_img.crop((w - 960, h - 544, w, h))
 
-            left_img = preprocess_data(left_img)
-            right_img = preprocess_data(right_img)
+        left_img = preprocess_data(left_img)
+        right_img = preprocess_data(right_img)
 
-            return left_img, right_img, data
+        return left_img, right_img, data
 
     def __len__(self):
         return len(self.left_images)
+
 
 def readPFM(file):
     file = open(file, 'rb')
@@ -120,5 +117,6 @@ if __name__ == '__main__':
     print(im.size)
     data, scale = load_disparity("sample_dataset/disparity/0006.pfm")
     data = np.asarray(data)
-    print(data.shape)'''
+    print(data.shape)
+'''
 
