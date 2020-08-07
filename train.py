@@ -55,32 +55,37 @@ def model_init():
     return model, optimizer
 
 
-def calculate_loss(output, mask, disp_true):
+def calculate_loss(output, disp_true, weights = None):
+    pr1, pr2, pr3, pr4, pr5, pr6 = output
 
-    '''print(disp_true[0].shape)
-    print(mask.shape)
-    print(output[0].shape)
-    print(output[1].shape)
-    print(output[2].shape)
-    print(output[3].shape)
-    print(output[4].shape)
-    print(output[5].shape)'''
+    # predict flow upsampling
+    out_size = pr1.shape[-2:]
+    out1 = pr1
+    out2 = F.interpolate(pr2, out_size, mode='bilinear')
+    out3 = F.interpolate(pr3, out_size, mode='bilinear')
+    out4 = F.interpolate(pr4, out_size, mode='bilinear')
+    out5 = F.interpolate(pr5, out_size, mode='bilinear')
+    out6 = F.interpolate(pr6, out_size, mode='bilinear')
 
+    # squeeze
+    out1 = torch.squeeze(out1, 1)
+    out2 = torch.squeeze(out2, 1)
+    out3 = torch.squeeze(out3, 1)
+    out4 = torch.squeeze(out4, 1)
+    out5 = torch.squeeze(out5, 1)
+    out6 = torch.squeeze(out6, 1)
 
-    output1 = torch.squeeze(output[0], 1)
-    output2 = torch.squeeze(output[1], 1)
-    output3 = torch.squeeze(output[2], 1)
-    ''' output4 = torch.squeeze(output[3], 1)
-    output5 = torch.squeeze(output[4], 1)
-    output6 = torch.squeeze(output[5], 1)'''
+    # weights
+    if weights is None:
+        weights = [0.0025, 0.005, 0.01, 0.02, 0.08, 0.32]
 
-    #print(output1.shape)
-    #img = Image.fromarray(np.asarray(output1[0].numpy()), 'RGB')
-    #img.save('img.png')
-    #img.show()
+    outs = (out6, out5, out4, out3, out2, out1)
+    loss = 0
+    for w, o in zip(weights, outs):
+        loss_delta = w * F.smooth_l1_loss(o, disp_true, size_average=True)
+        loss += loss_delta
 
-    loss = F.smooth_l1_loss(output1[mask], disp_true[mask], size_average=True)
-    #+ 0.7*F.smooth_l1_loss(output2[mask], disp_true[mask], size_average=True) + F.smooth_l1_loss(output3[mask], disp_true[mask], size_average=True)
+    # loss = F.smooth_l1_loss(output1[mask], disp_true[mask], size_average=True)
 
     return loss
 
@@ -105,14 +110,11 @@ def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThing
             imgR = Variable(torch.FloatTensor(imgR).to(DEVICE), requires_grad=False)
             disp_true = Variable(torch.FloatTensor(dispL).to(DEVICE), requires_grad=False)
             input_cat = Variable(torch.cat((imgL, imgR), 1), requires_grad=False)
-            # maximum disparity
-            mask = disp_true < 192
-            mask.detach_()
 
             optimizer.zero_grad()
             output = model(input_cat)
 
-            loss = calculate_loss(output, mask, disp_true)
+            loss = calculate_loss(output, disp_true)
 
             '''
                 loss = criterion(output, dispL)
@@ -126,7 +128,7 @@ def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThing
 
             loss.backward()
             optimizer.step()
-            
+
         torch.save(model.state_dict(), MODEL_PTH + str(epoch) + '_dispnet.pth')
         total_train_loss += loss
         print('Epoch {} loss: {:.3f} Time elapsed: {:.3f}'.format(epoch, loss, time.time() - start))
