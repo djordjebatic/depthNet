@@ -136,3 +136,4 @@ dmypy.json
 
 FlyingThings3D_subset/
 runs/
+.vscode/settings.json

@@ -20,21 +20,21 @@ def load_data(root = 'FlyingThings3D_subset' ):
         if count > 150:
             break
 
-        img_l = os.listdir(root + '/' + i + '/image_clean/left/')
+        img_l = os.listdir(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'left' + os.sep)
 
         for img in img_l:
-            if check_image(root + '/' + i + '/image_clean/left/' + img):
+            if check_image(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'left' + os.sep + img):
                 if i == 'train':
-                    left_images_train.append(root + '/' + i + '/image_clean/left/' + img)
-                    left_disps_train.append(root + '/' + i + '/disparity/left/' + img.split(".")[0] + '.pfm')
+                    left_images_train.append(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'left' + os.sep + img)
+                    left_disps_train.append(root + os.sep + i + os.sep +'disparity' + os.sep + 'left' + os.sep + img.split(".")[0] + '.pfm')
                 else:
-                    left_images_test.append(root + '/' + i + '/image_clean/left/' + img)
-                    left_disps_test.append(root + '/' + i + '/disparity/left/' + img.split(".")[0] + '.pfm')
-            if check_image(root + '/' + i + '/image_clean/right/' + img):
+                    left_images_test.append(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'left' + os.sep + img)
+                    left_disps_test.append(root + os.sep + i + os.sep + 'disparity' + os.sep + 'left' + os.sep + img.split(".")[0] + '.pfm')
+            if check_image(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'right' + os.sep + img):
                 if i == 'train':
-                    right_images_train.append(root + '/' + i + '/image_clean/right/' + img)
+                    right_images_train.append(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'right' + os.sep + img)
                 else:
-                    right_images_test.append(root + '/' + i + '/image_clean/right/' + img)
+                    right_images_test.append(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'right' + os.sep + img)
 
         count += 1
 
