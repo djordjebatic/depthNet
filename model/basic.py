@@ -155,6 +155,7 @@ class DispNetSimple(nn.Module):
         iconv1 = self.iconv1(torch.cat([deconv1, pr2_up, out_conv1], dim=1))
         pr1 = self.predict_disp1(iconv1)
 
+
         if self.training:
             return pr1, pr2, pr3, pr4, pr5, pr6
         else:
