@@ -29,7 +29,7 @@ torch.manual_seed(1)
 torch.cuda.manual_seed(1)
 
 
-def make_data_loaders(root):
+def make_data_loaders(root = 'FlyingThings3D_subset'):
     'Loads the train and val datasets'
     left_imgs_train, right_imgs_train, left_disps_train, left_imgs_val, right_imgs_val, left_disps_val = dataset_loader.load_data(root)
 
@@ -145,4 +145,4 @@ if __name__ == '__main__':
 
     model, optimizer = model_init()
 
-    train_sample(model, optimizer, train_loader, val_loader, root)
+    train_sample(model, optimizer, train_loader, val_loader)
