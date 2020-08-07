@@ -6,9 +6,8 @@ import filetype
 def check_image(filename):
     return filetype.is_image(filename)
 
-def load_data():
-    
-    root = 'FlyingThings3D_subset'
+def load_data(root = 'FlyingThings3D_subset' ):
+
 
     left_images_train = []
     right_images_train = []
@@ -36,7 +35,7 @@ def load_data():
                     right_images_train.append(root + '/' + i + '/image_clean/right/' + img)
                 else:
                     right_images_test.append(root + '/' + i + '/image_clean/right/' + img)
-        
+
         count += 1
 
 
@@ -44,5 +43,8 @@ def load_data():
 
 
 if __name__ == '__main__':
-    lt, rt, ld, lte, rte, ldte = load_data()
+    root = 'sample_dataset'
+    lt, rt, ld, lte, rte, ldte = load_data(root)
     print(len(lt), len(rt), len(ld), len(lte), len(rte), len(ldte))
+    for img_set in (lt, rt, ld, lte, rte, ldte):
+        print(img_set)
