@@ -17,7 +17,6 @@ import numpy as np
 
 '''
     DispNet:
-
     Name        Kernel  Str.    Ch I/O      InpRes      OutRes      Input
     ---------------------------------------------------------------------------------
     conv1       7×7     2       6/64        768×384     384×192     Images
