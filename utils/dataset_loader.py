@@ -8,7 +8,6 @@ def check_image(filename):
 
 def load_data(root = 'FlyingThings3D_subset' ):
 
-
     left_images_train = []
     right_images_train = []
     left_disps_train = []
@@ -17,8 +16,6 @@ def load_data(root = 'FlyingThings3D_subset' ):
     left_disps_test = []
 
     for count, i in enumerate(['train', 'val']):
-        if count > 150:
-            break
 
         img_l = os.listdir(root + os.sep + i + os.sep + 'image_clean' + os.sep + 'left' + os.sep)
 
@@ -40,11 +37,3 @@ def load_data(root = 'FlyingThings3D_subset' ):
 
 
     return left_images_train, right_images_train, left_disps_train, left_images_test, right_images_test, left_disps_test
-
-
-if __name__ == '__main__':
-    root = 'sample_dataset'
-    lt, rt, ld, lte, rte, ldte = load_data(root)
-    print(len(lt), len(rt), len(ld), len(lte), len(rte), len(ldte))
-    for img_set in (lt, rt, ld, lte, rte, ldte):
-        print(img_set)

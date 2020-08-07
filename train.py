@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,18 +10,18 @@ from dataloader import FlyingThingsLoader as FLY
 from model.basic import DispNetSimple
 from utils import dataset_loader
 from torch.autograd import Variable
-#from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import time
 from model.loss import multiscaleloss, AverageMeter
 from PIL import Image
 import numpy as np
 
 
-DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+DEVICE = torch.device("cuda:0")
 MAX_SUMMARY_IMAGES = 4
-LR = 1e-4
-EPOCHS = 20
-BATCH_SIZE = 64
+LR = 3e-4
+EPOCHS = 300
+BATCH_SIZE = 16
 NUM_WORKERS = 8
 LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
 MODEL_PTH = 'saved_models/'
@@ -33,22 +36,26 @@ def make_data_loaders(root = 'FlyingThings3D_subset'):
     'Loads the train and val datasets'
     left_imgs_train, right_imgs_train, left_disps_train, left_imgs_val, right_imgs_val, left_disps_val = dataset_loader.load_data(root)
 
+    print(len(left_disps_train), len(left_imgs_train))
+
     train_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_train[:50], right_imgs_train[:50], left_disps_train[:50], True),
-        batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
+        FLY.FlyingThingsDataloader(left_imgs_train[:12000], right_imgs_train[:12000], left_disps_train[:12000], True),
+        batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
     )
 
     val_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_val[:25], right_imgs_val[:25], left_disps_val[:25], False),
-        batch_size=64, shuffle=False, num_workers=4, drop_last=False
+        FLY.FlyingThingsDataloader(left_imgs_val, right_imgs_val, left_disps_val, False),
+        batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
     )
 
     print('Data loaded.')
-    return (train_loader, val_loader)
+    return train_loader, val_loader
 
 
-def model_init():
+def model_init(dual_gpu=False):
     model = DispNetSimple().to(DEVICE)
+    if dual_gpu:
+        model = nn.DataParallel(model)
     optimizer = optim.Adam(model.parameters(), lr=LR)
     print('Model initialized.')
     print('Number of model parameters:\t{}'.format(sum([p.data.nelement() for p in model.parameters()])))
@@ -97,7 +104,7 @@ def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThing
     start = time.time()
 
     # TODO Initialize the Tensorboard summary. Logs will end up in runs directory
-    #summary_writer = SummaryWriter()
+    writer = SummaryWriter()
 
     print('Training loop started.')
 
@@ -131,20 +138,21 @@ def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThing
 
         torch.save(model.state_dict(), MODEL_PTH + str(epoch) + '_dispnet.pth')
         total_train_loss += loss
+        writer.add_scalar('loss/train', loss, epoch)
         print('Epoch {} loss: {:.3f} Time elapsed: {:.3f}'.format(epoch, loss, time.time() - start))
 
     print('Total loss is: {:.3f}'.format(total_train_loss/EPOCHS))
     del model, imgL, imgR, disp_true
     print('Total time elapsed: {:.3f}'.format(time.time() - start))
 
-
+    writer.close()
 
 if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     root = 'SAMPLE_BATCH'
-    train_loader, val_loader = make_data_loaders(root)
+    train_loader, val_loader = make_data_loaders()
 
-    model, optimizer = model_init()
+    model, optimizer = model_init(True)
 
     train_sample(model, optimizer, train_loader, val_loader)
