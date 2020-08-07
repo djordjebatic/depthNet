@@ -17,13 +17,8 @@ import numpy as np
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 MAX_SUMMARY_IMAGES = 4
 LR = 1e-4
-<<<<<<< HEAD
 EPOCHS = 20
 BATCH_SIZE = 64
-=======
-EPOCHS = 15
-BATCH_SIZE = 16 
->>>>>>> fd27ba22994e960c5c476ecdd92c8fdc02e80721
 NUM_WORKERS = 8
 LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
 MODEL_PTH = 'saved_models/'
@@ -126,13 +121,9 @@ def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThing
 
                 losses.update(loss.data.item(), disp_true.size(0))
             '''
-<<<<<<< HEAD
 
             total_train_loss += loss
 
-=======
-            
->>>>>>> fd27ba22994e960c5c476ecdd92c8fdc02e80721
             loss.backward()
             optimizer.step()
             
