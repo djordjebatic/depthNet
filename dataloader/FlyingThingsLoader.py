@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 from torchvision import transforms
 import re
+import random
 
 
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
@@ -47,12 +48,26 @@ class FlyingThingsDataloader(Dataset):
         data = np.ascontiguousarray(data, dtype=np.float32)#/256
 
         if self.train:
+            w, h = left_img.size
+            th, tw = 256, 512
+
+            x1 = random.randint(0, w - tw)
+            y1 = random.randint(0, h - th)
+
+            left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
+            right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
+
+            data = data[y1:y1 + th, x1:x1 + tw]
 
             left_img = preprocess_data(left_img)
             right_img = preprocess_data(right_img)
 
             return left_img, right_img, data
         else:
+
+            w, h = left_img.size
+            left_img = left_img.crop((w - 960, h - 544, w, h))
+            right_img = right_img.crop((w - 960, h - 544, w, h))
 
             left_img = preprocess_data(left_img)
             right_img = preprocess_data(right_img)

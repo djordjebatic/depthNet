@@ -7,7 +7,7 @@ from dataloader import FlyingThingsLoader as FLY
 from model.basic import DispNetSimple
 from utils import dataset_loader
 from torch.autograd import Variable
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 import time
 from model.loss import multiscaleloss, AverageMeter
 
@@ -27,7 +27,7 @@ torch.cuda.manual_seed(1)
 
 def train_sample():
     # Initialize the Tensorboard summary. Logs will end up in runs directory
-    summary_writer = SummaryWriter()
+    #summary_writer = SummaryWriter()
 
     losses = AverageMeter()
 
@@ -57,21 +57,27 @@ def train_sample():
     print('Training started')
     
     for batch_idx, (imgL, imgR, dispL) in enumerate(train_loader):
-        print('Batch {.f}', batch_idx)
+        print('Batch ', batch_idx)
 
         criterion = multiscaleloss(7, 1, LOSS_WEIGHTS[batch_idx], loss='L1', sparse=False)
 
-        imgL = Variable(torch.FloatTensor(imgL)).cuda()
-        imgR = Variable(torch.FloatTensor(imgR)).cuda()
-        dispL = Variable(torch.FloatTensor(dispL)).cuda()
-        input_cat = torch.cat((imgL, imgR), 1)
-
+        imgL = Variable(torch.FloatTensor(imgL).cuda(), requires_grad=False)
+        imgR = Variable(torch.FloatTensor(imgR).cuda(), requires_grad=False)
+        dispL = Variable(torch.FloatTensor(dispL).cuda(), requires_grad=False)
+        input_cat = Variable(torch.cat((imgL, imgR), 1), requires_grad=False)
         # maximum disparity
         mask = dispL < 192
         mask.detach_()
 
         optimizer.zero_grad()
         output = model(input_cat)
+
+        print(dispL[0].shape)
+        print(output[0].shape)
+        print(output[1].shape)
+        print(output[2].shape)
+        print(output[3].shape)
+
         loss = criterion(output, dispL)
         if type(loss) is list or type(loss) is tuple:
             loss = torch.sum(loss)
