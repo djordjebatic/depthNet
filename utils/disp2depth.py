@@ -22,7 +22,7 @@ def disp_to_depth_real(disp, focal_length = 35, baseline = 1):
 
     Default focal length and baseline are for SceneFlow dataset.
     '''
-    depth = (focal_length * baseline) / disp
+    depth = (focal_length * baseline) / np.abs(disp)
     return depth
 
 
