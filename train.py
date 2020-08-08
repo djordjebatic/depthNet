@@ -7,6 +7,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import numpy as numpy
 from dataloader import FlyingThingsLoader as FLY
+from dataloader.KITTILoader import KITTILoader
 from model.basic import DispNetSimple
 from utils import dataset_loader
 from torch.autograd import Variable
@@ -24,7 +25,7 @@ EPOCHS = 300
 BATCH_SIZE = 16
 NUM_WORKERS = 8
 LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
-MODEL_PTH = 'saved_models/'
+MODEL_PTH = 'saved_models/kitti_'
 
 assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
 
@@ -38,15 +39,27 @@ def make_data_loaders(root = 'FlyingThings3D_subset'):
 
     print(len(left_disps_train), len(left_imgs_train))
 
-    train_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_train[:12000], right_imgs_train[:12000], left_disps_train[:12000], True),
-        batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
-    )
+    if root == 'FlyingThings3D_subset':
+        train_loader = torch.utils.data.DataLoader(
+            FLY.FlyingThingsDataloader(left_imgs_train[:12000], right_imgs_train[:12000], left_disps_train[:12000], True),
+            batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
+        )
 
-    val_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_val, right_imgs_val, left_disps_val, False),
-        batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
-    )
+        val_loader = torch.utils.data.DataLoader(
+            FLY.FlyingThingsDataloader(left_imgs_val, right_imgs_val, left_disps_val, False),
+            batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
+        )
+
+    elif root == 'KITTI':
+        train_loader = torch.utils.data.DataLoader(
+            KITTILoader(left_imgs_train, right_imgs_train, left_disps_train, True),
+            batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
+        )
+
+        val_loader = torch.utils.data.DataLoader(
+            KITTILoader(left_imgs_val, right_imgs_val, left_disps_val, False),
+            batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
+        )
 
     print('Data loaded.')
     return train_loader, val_loader
@@ -56,10 +69,9 @@ def model_init(dual_gpu=False):
     model = DispNetSimple().to(DEVICE)
     if dual_gpu:
         model = nn.DataParallel(model)
-    optimizer = optim.Adam(model.parameters(), lr=LR)
     print('Model initialized.')
     print('Number of model parameters:\t{}'.format(sum([p.data.nelement() for p in model.parameters()])))
-    return model, optimizer
+    return model
 
 
 def calculate_loss(output, disp_true, weights = None):
@@ -96,7 +108,7 @@ def calculate_loss(output, disp_true, weights = None):
 
     return loss
 
-def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset'):
+def train_sample(model, train_loader):
 
     total_train_loss = 0
 
@@ -106,6 +118,7 @@ def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset')
     # TODO Initialize the Tensorboard summary. Logs will end up in runs directory
     writer = SummaryWriter()
 
+    optimizer = optim.Adam(model.parameters(), lr=LR)
     print('Training loop started.')
 
     for epoch in range(1, EPOCHS):
@@ -134,7 +147,7 @@ def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset')
             total_train_loss += loss
 
             loss.backward()
-            optimizer.step()
+            optimizer.step()            
 
         torch.save(model.state_dict(), MODEL_PTH + str(epoch) + '_dispnet.pth')
         total_train_loss += loss
@@ -182,8 +195,8 @@ class WrappedModel(nn.Module):
 if __name__ == '__main__':
     torch.cuda.empty_cache()
 
-    root = 'SAMPLE_BATCH'
-    train_loader, val_loader = make_data_loaders()
+    #root = 'SAMPLE_BATCH'
+    train_loader, val_loader = make_data_loaders("KITTI")
 
     #dual_gpu = torch.cuda.device_count() > 1
     #model, optimizer = model_init(dual_gpu)
@@ -193,4 +206,5 @@ if __name__ == '__main__':
     model.load_state_dict(state_dict)
     print("Model loaded")
 
-    validation_simple(model, val_loader)
+    train_sample(model, train_loader)
+    #validation_simple(model, val_loader)
