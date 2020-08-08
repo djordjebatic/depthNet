@@ -6,13 +6,12 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as numpy
-from dataloader import FlyingThingsLoader as FLY
+from dataloader.StereoDatasetLoader import get_data_loaders
 from model.basic import DispNetSimple
-from utils import dataset_loader
+from model.loss import multiscale_loss
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 import time
-from model.loss import multiscaleloss, AverageMeter
 from PIL import Image
 import numpy as np
 
@@ -31,27 +30,6 @@ assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
 
-
-def make_data_loaders(root = 'FlyingThings3D_subset'):
-    'Loads the train and val datasets'
-    left_imgs_train, right_imgs_train, left_disps_train, left_imgs_val, right_imgs_val, left_disps_val = dataset_loader.load_data(root)
-
-    print(len(left_disps_train), len(left_imgs_train))
-
-    train_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_train[:12000], right_imgs_train[:12000], left_disps_train[:12000], True),
-        batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
-    )
-
-    val_loader = torch.utils.data.DataLoader(
-        FLY.FlyingThingsDataloader(left_imgs_val, right_imgs_val, left_disps_val, False),
-        batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
-    )
-
-    print('Data loaded.')
-    return train_loader, val_loader
-
-
 def model_init(dual_gpu=False):
     model = DispNetSimple().to(DEVICE)
     if dual_gpu:
@@ -61,41 +39,6 @@ def model_init(dual_gpu=False):
     print('Number of model parameters:\t{}'.format(sum([p.data.nelement() for p in model.parameters()])))
     return model, optimizer
 
-
-def calculate_loss(output, disp_true, weights = None):
-    ''' Weighted multiscale loss.
-    '''
-    pr1, pr2, pr3, pr4, pr5, pr6 = output
-
-    # predict flow upsampling
-    out_size = pr1.shape[-2:]
-    out1 = pr1
-    out2 = F.interpolate(pr2, out_size, mode='bilinear')
-    out3 = F.interpolate(pr3, out_size, mode='bilinear')
-    out4 = F.interpolate(pr4, out_size, mode='bilinear')
-    out5 = F.interpolate(pr5, out_size, mode='bilinear')
-    out6 = F.interpolate(pr6, out_size, mode='bilinear')
-
-    # squeeze
-    out1 = torch.squeeze(out1, 1)
-    out2 = torch.squeeze(out2, 1)
-    out3 = torch.squeeze(out3, 1)
-    out4 = torch.squeeze(out4, 1)
-    out5 = torch.squeeze(out5, 1)
-    out6 = torch.squeeze(out6, 1)
-
-    # weights
-    if weights is None:
-        weights = [0.0025, 0.005, 0.01, 0.02, 0.08, 0.32]
-
-    # weighted multiscale loss
-    outs = (out6, out5, out4, out3, out2, out1)
-    loss = 0
-    for w, o in zip(weights, outs):
-        loss_delta = w * F.smooth_l1_loss(o, disp_true, size_average=True)
-        loss += loss_delta
-
-    return loss
 
 def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset'):
 
@@ -119,7 +62,7 @@ def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset')
             optimizer.zero_grad()
             output = model(input_cat)
 
-            loss = calculate_loss(output, disp_true)
+            loss = multiscale_loss(output, disp_true)
 
             total_train_loss += loss
 
@@ -173,11 +116,11 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     root = 'SAMPLE_BATCH'
-    train_loader, val_loader = make_data_loaders()
+    train_loader, val_loader = get_data_loaders(BATCH_SIZE, NUM_WORKERS)
 
-    #dual_gpu = torch.cuda.device_count() > 1
-    #model, optimizer = model_init(dual_gpu)
-    #train_sample(model, optimizer, train_loader)
+    # dual_gpu = torch.cuda.device_count() > 1
+    # model, optimizer = model_init(dual_gpu)
+    # train_sample(model, optimizer, train_loader)
 
     state_dict_filename = "saved_models/46_dispnet.pth"
     state_dict = torch.load(state_dict_filename)
