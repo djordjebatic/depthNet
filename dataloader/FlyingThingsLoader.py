@@ -1,8 +1,8 @@
-from torch.utils.data import Dataset
-from PIL import Image
 import numpy as np
+from utils.python_pfm import readPFM
+from PIL import Image
 from torchvision import transforms
-import re
+from torch.utils.data import Dataset
 import random
 
 
@@ -10,7 +10,9 @@ IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
 IMAGENET_STD = np.array([0.229, 0.224, 0.225]) 
     
 def load_disparity(file_path):
-    return readPFM(file_path)
+    pfm, _ = readPFM(file_path)
+    data = np.ascontiguousarray(pfm, dtype=np.float32)
+    return data
 
 def load_image(image_path):
     return Image.open(image_path).convert('RGB')
@@ -47,8 +49,7 @@ class FlyingThingsDataloader(Dataset):
         
         w, h = left_img.size
 
-        data, _ = readPFM(disparity_path)
-        data = np.ascontiguousarray(data, dtype=np.float32)
+        data = load_disparity(disparity_path)
 
         if self.train:
             th, tw = 256, 512
@@ -72,51 +73,4 @@ class FlyingThingsDataloader(Dataset):
 
     def __len__(self):
         return len(self.left_images)
-
-
-def readPFM(file):
-    file = open(file, 'rb')
-
-    color = None
-    width = None
-    height = None
-    scale = None
-    endian = None
-
-    header = file.readline().decode('utf-8').rstrip()
-    if header == 'PF':
-        color = True
-    elif header == 'Pf':
-        color = False
-    else:
-        raise Exception('Not a PFM file.')
-
-    dim_match = re.match(r'^(\d+)\s(\d+)\s$', file.readline().decode('utf-8'))
-    if dim_match:
-        width, height = map(int, dim_match.groups())
-    else:
-        raise Exception('Malformed PFM header.')
-
-    scale = float(file.readline().decode('utf-8').rstrip())
-    if scale < 0: # little-endian
-        endian = '<'
-        scale = -scale
-    else:
-        endian = '>' # big-endian
-
-    data = np.fromfile(file, endian + 'f')
-    shape = (height, width, 3) if color else (height, width)
-
-    data = np.reshape(data, shape)
-    data = np.flipud(data)
-    return data, scale
-'''
-if __name__ == '__main__':
-
-    im = load_image('sample_dataset/RGB_cleanpass/left/0006.png')
-    print(im.size)
-    data, scale = load_disparity("sample_dataset/disparity/0006.pfm")
-    data = np.asarray(data)
-    print(data.shape)
-'''
 

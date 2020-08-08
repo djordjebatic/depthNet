@@ -40,6 +40,7 @@ def readPFM(file):
     data = np.flipud(data)
     return data, scale
 
+
 def writePFM(file, image, scale=1):
     file = open(file, 'wb')
 
