@@ -6,7 +6,7 @@ import filetype
 def check_image(filename):
     return filetype.is_image(filename)
 
-def load_data(root = 'FlyingThings3D_subset' ):
+def load_addresses(root = 'FlyingThings3D_subset' ):
 
     left_images_train = []
     right_images_train = []
