@@ -141,3 +141,5 @@ runs/
 data_scene_flow/
 saved_models/
 PSMNet-master/
+# because saved models are too big for GitHub
+*.pth

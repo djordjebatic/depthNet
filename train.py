@@ -1,6 +1,3 @@
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,13 +6,13 @@ import numpy as numpy
 from dataloader import FlyingThingsLoader as FLY
 from dataloader.KITTILoader import KITTILoader
 from model.basic import DispNetSimple
-from utils import dataset_loader
+from model.loss import multiscale_loss
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 import time
-from model.loss import multiscaleloss, AverageMeter
-from PIL import Image
-import numpy as np
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -26,6 +23,7 @@ BATCH_SIZE = 16
 NUM_WORKERS = 8
 LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
 MODEL_PTH = 'saved_models/kitti_'
+
 
 assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
 
@@ -115,7 +113,6 @@ def train_sample(model, train_loader):
     model.train()
     start = time.time()
 
-    # TODO Initialize the Tensorboard summary. Logs will end up in runs directory
     writer = SummaryWriter()
 
     optimizer = optim.Adam(model.parameters(), lr=LR)
@@ -123,8 +120,6 @@ def train_sample(model, train_loader):
 
     for epoch in range(1, EPOCHS):
         for batch_idx, (imgL, imgR, dispL) in enumerate(train_loader):
-
-            #criterion = multiscaleloss(7, 1, LOSS_WEIGHTS[batch_idx], loss='L1', sparse=False)
 
             imgL = Variable(torch.FloatTensor(imgL).to(DEVICE), requires_grad=False)
             imgR = Variable(torch.FloatTensor(imgR).to(DEVICE), requires_grad=False)
@@ -141,15 +136,7 @@ def train_sample(model, train_loader):
             output = model(input_cat)
             print(output.shape)
 
-            loss = calculate_loss(output, disp_true)
-
-            '''
-                loss = criterion(output, dispL)
-                if type(loss) is list or type(loss) is tuple:
-                    loss = torch.sum(loss)
-
-                losses.update(loss.data.item(), disp_true.size(0))
-            '''
+            loss = multiscale_loss(output, disp_true)
 
             total_train_loss += loss
 
@@ -169,13 +156,14 @@ def train_sample(model, train_loader):
 
 
 def validation_simple(model, val_loader):
+    # TODO include validation inside the training loop for progress tracking
     model.eval()
 
     total_validation_loss = 0
     start = time.time()
     for batch_idx, (imgL, imgR, dispL) in enumerate(val_loader):
-        imgL, imgR, disp_true = imgL.cuda(), imgR.cuda(), dispL.cuda()
-    
+        imgL, imgR, disp_true = imgL.to(DEVICE), imgR.to(DEVICE), dispL.to(DEVICE)
+
         with torch.no_grad():
             disp = model(torch.cat((imgL, imgR), 1))
             disp = torch.squeeze(disp)
@@ -198,20 +186,18 @@ class WrappedModel(nn.Module):
     def forward(self, x):
         return self.module(x)
 
-        
+
 if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     #root = 'SAMPLE_BATCH'
     train_loader, val_loader = make_data_loaders("KITTI")
 
-    #dual_gpu = torch.cuda.device_count() > 1
-    #model, optimizer = model_init(dual_gpu)
-    #train_sample(model, optimizer, train_loader)
+    state_dict_filename = "saved_models/46_dispnet.pth"
+    state_dict = torch.load(state_dict_filename)
     model = WrappedModel()
-    state_dict = torch.load("saved_models/46_dispnet.pth")
     model.load_state_dict(state_dict)
-    print("Model loaded")
+    print("Model loaded.")
 
     train_sample(model, train_loader)
     #validation_simple(model, val_loader)
