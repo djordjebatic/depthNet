@@ -17,7 +17,7 @@ from PIL import Image
 import numpy as np
 
 
-DEVICE = torch.device("cuda:0")
+DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 MAX_SUMMARY_IMAGES = 4
 LR = 3e-4
 EPOCHS = 300
@@ -153,6 +153,7 @@ if __name__ == '__main__':
     root = 'SAMPLE_BATCH'
     train_loader, val_loader = make_data_loaders()
 
-    model, optimizer = model_init(True)
+    dual_gpu = torch.cuda.device_count() > 1
+    model, optimizer = model_init(dual_gpu)
 
     train_sample(model, optimizer, train_loader, val_loader)
