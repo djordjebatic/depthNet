@@ -67,10 +67,15 @@ if __name__ == '__main__':
     disp, scale = readPFM(path)
     depth = disp_to_depth_real(disp)
 
-    for metric in [root_mean_square_error, relative_absolute_error]:
-        m = metric(depth, depth)
-        assert abs(m) <= 1e-4
+    noise = np.random.normal(0, 10, depth.shape)
+    depth_new = depth + noise
 
-    gt_exp, d_list = get_GT_explained(depth, depth, K_default)
+    for metric, metric_name in zip([root_mean_square_error, relative_absolute_error], ['RMSE', 'MRAE']):
+        m = metric(depth_new, depth)
+        print('Error', metric_name, '=', m)
+
+    print('GT explained:')
+    gt_exp, d_list = get_GT_explained(depth_new, depth, K_default)
     plt.plot(d_list, gt_exp)
+    plt.xscale('log')
     plt.show()
