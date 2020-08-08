@@ -82,6 +82,7 @@ def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset')
 
 
 def validation_simple(model, val_loader):
+    # TODO include validation inside the training loop for progress tracking
     model.eval()
 
     total_validation_loss = 0
