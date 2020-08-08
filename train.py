@@ -63,6 +63,8 @@ def model_init(dual_gpu=False):
 
 
 def calculate_loss(output, disp_true, weights = None):
+    ''' Weighted multiscale loss.
+    '''
     pr1, pr2, pr3, pr4, pr5, pr6 = output
 
     # predict flow upsampling
@@ -86,13 +88,12 @@ def calculate_loss(output, disp_true, weights = None):
     if weights is None:
         weights = [0.0025, 0.005, 0.01, 0.02, 0.08, 0.32]
 
+    # weighted multiscale loss
     outs = (out6, out5, out4, out3, out2, out1)
     loss = 0
     for w, o in zip(weights, outs):
         loss_delta = w * F.smooth_l1_loss(o, disp_true, size_average=True)
         loss += loss_delta
-
-    # loss = F.smooth_l1_loss(output1[mask], disp_true[mask], size_average=True)
 
     return loss
 
@@ -103,15 +104,12 @@ def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset')
     model.train()
     start = time.time()
 
-    # TODO Initialize the Tensorboard summary. Logs will end up in runs directory
     writer = SummaryWriter()
 
     print('Training loop started.')
 
     for epoch in range(1, EPOCHS):
         for batch_idx, (imgL, imgR, dispL) in enumerate(train_loader):
-
-            #criterion = multiscaleloss(7, 1, LOSS_WEIGHTS[batch_idx], loss='L1', sparse=False)
 
             imgL = Variable(torch.FloatTensor(imgL).to(DEVICE), requires_grad=False)
             imgR = Variable(torch.FloatTensor(imgR).to(DEVICE), requires_grad=False)
@@ -122,14 +120,6 @@ def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset')
             output = model(input_cat)
 
             loss = calculate_loss(output, disp_true)
-
-            '''
-                loss = criterion(output, dispL)
-                if type(loss) is list or type(loss) is tuple:
-                    loss = torch.sum(loss)
-
-                losses.update(loss.data.item(), disp_true.size(0))
-            '''
 
             total_train_loss += loss
 
@@ -154,8 +144,8 @@ def validation_simple(model, val_loader):
     total_validation_loss = 0
     start = time.time()
     for batch_idx, (imgL, imgR, dispL) in enumerate(val_loader):
-        imgL, imgR, disp_true = imgL.cuda(), imgR.cuda(), dispL.cuda()
-    
+        imgL, imgR, disp_true = imgL.to(DEVICE), imgR.to(DEVICE), dispL.to(DEVICE)
+
         with torch.no_grad():
             disp = model(torch.cat((imgL, imgR), 1))
             disp = torch.squeeze(disp)
@@ -178,7 +168,7 @@ class WrappedModel(nn.Module):
     def forward(self, x):
         return self.module(x)
 
-        
+
 if __name__ == '__main__':
     torch.cuda.empty_cache()
 
@@ -188,9 +178,11 @@ if __name__ == '__main__':
     #dual_gpu = torch.cuda.device_count() > 1
     #model, optimizer = model_init(dual_gpu)
     #train_sample(model, optimizer, train_loader)
+
+    state_dict_filename = "saved_models/46_dispnet.pth"
+    state_dict = torch.load(state_dict_filename)
     model = WrappedModel()
-    state_dict = torch.load("saved_models/46_dispnet.pth")
     model.load_state_dict(state_dict)
-    print("Model loaded")
+    print("Model loaded.")
 
     validation_simple(model, val_loader)
