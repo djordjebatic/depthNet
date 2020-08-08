@@ -137,3 +137,6 @@ dmypy.json
 FlyingThings3D_subset/
 runs/
 .vscode/settings.json
+
+# because saved models are too big for GitHub
+*.pth
