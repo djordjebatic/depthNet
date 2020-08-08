@@ -1,19 +1,16 @@
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import numpy as numpy
 from dataloader.StereoDatasetLoader import get_data_loaders
 from model.basic import DispNetSimple
 from model.loss import multiscale_loss
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 import time
-from PIL import Image
-import numpy as np
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -25,10 +22,12 @@ NUM_WORKERS = 8
 LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
 MODEL_PTH = 'saved_models/'
 
+
 assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
 
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
+
 
 def model_init(dual_gpu=False):
     model = DispNetSimple().to(DEVICE)
