@@ -96,7 +96,7 @@ def calculate_loss(output, disp_true, weights = None):
 
     return loss
 
-def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThings3D_subset'):
+def train_sample(model, optimizer, train_loader, root = 'FlyingThings3D_subset'):
 
     total_train_loss = 0
 
@@ -147,13 +147,50 @@ def train_sample(model, optimizer, train_loader, val_loader, root = 'FlyingThing
 
     writer.close()
 
+
+def validation_simple(model, val_loader):
+    model.eval()
+
+    total_validation_loss = 0
+    start = time.time()
+    for batch_idx, (imgL, imgR, dispL) in enumerate(val_loader):
+        imgL, imgR, disp_true = imgL.cuda(), imgR.cuda(), dispL.cuda()
+    
+        with torch.no_grad():
+            disp = model(torch.cat((imgL, imgR), 1))
+            disp = torch.squeeze(disp)
+
+        #print(disp.shape, disp_true.shape)
+        #disp = F.upsample(disp, size=(BATCH_SIZE, 512, 960), mode='bilinear')
+        loss = F.smooth_l1_loss(disp_true, disp)
+        total_validation_loss += loss
+        print('Batch {} val loss: {:.3f} Time elapsed: {:.3f}'.format(batch_idx, loss, time.time() - start))
+
+    print('\nTotal val loss: {:.3f} Time elapsed: {:.3f}'.format(total_validation_loss/len(val_loader), time.time() - start))
+
+    return loss.data.cpu()
+
+
+class WrappedModel(nn.Module):
+    def __init__(self):
+        super(WrappedModel, self).__init__()
+        self.module = DispNetSimple().to(DEVICE)
+    def forward(self, x):
+        return self.module(x)
+
+        
 if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     root = 'SAMPLE_BATCH'
     train_loader, val_loader = make_data_loaders()
 
-    dual_gpu = torch.cuda.device_count() > 1
-    model, optimizer = model_init(dual_gpu)
+    #dual_gpu = torch.cuda.device_count() > 1
+    #model, optimizer = model_init(dual_gpu)
+    #train_sample(model, optimizer, train_loader)
+    model = WrappedModel()
+    state_dict = torch.load("saved_models/46_dispnet.pth")
+    model.load_state_dict(state_dict)
+    print("Model loaded")
 
-    train_sample(model, optimizer, train_loader, val_loader)
+    validation_simple(model, val_loader)

@@ -63,8 +63,18 @@ class FlyingThingsDataloader(Dataset):
             data = data[y1:y1 + th, x1:x1 + tw]
 
         else:
-            left_img = left_img.crop((w - 960, h - 544, w, h))
-            right_img = right_img.crop((w - 960, h - 544, w, h))
+            th, tw = 512, 960
+
+            x1 = random.randint(0, w - tw)
+            y1 = random.randint(0, h - th)
+
+            left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
+            right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
+
+            data = data[y1:y1 + th, x1:x1 + tw]
+            
+            #data = Image.fromarray(data.astype('uint8'), 'RGB').resize((tw, th))
+            #data = np.array(data)
 
         left_img = preprocess_data(left_img)
         right_img = preprocess_data(right_img)
