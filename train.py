@@ -131,8 +131,15 @@ def train_sample(model, train_loader):
             disp_true = Variable(torch.FloatTensor(dispL).to(DEVICE), requires_grad=False)
             input_cat = Variable(torch.cat((imgL, imgR), 1), requires_grad=False)
 
+            mask = disp_true > 0
+            mask.detach_()
+
+            print(disp_true.shape)
+            print(mask.shape)
+
             optimizer.zero_grad()
             output = model(input_cat)
+            print(output.shape)
 
             loss = calculate_loss(output, disp_true)
 

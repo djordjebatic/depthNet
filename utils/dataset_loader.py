@@ -54,14 +54,7 @@ def load_data(root = 'FlyingThings3D_subset' ):
         left_images_test = ['data_scene_flow/training/' + left_folder + image for image in val_images]
         right_images_test = ['data_scene_flow/training/' + right_folder + image for image in val_images]
         left_disps_test = ['data_scene_flow/training/' + disp_left + image for image in val_images]
-
-        print(left_images_train[0])
-        print(right_images_train[0])
-        print(left_disps_train[0])
-        print(left_images_test[0])
-        print(right_images_test[0])
-        print(left_disps_test[0])
-
+        
     else:
         return "WRONG ROOT FOLDER NAME"
 

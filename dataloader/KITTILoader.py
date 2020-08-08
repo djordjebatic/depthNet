@@ -4,6 +4,10 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 import random
     
+
+IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
+IMAGENET_STD = np.array([0.229, 0.224, 0.225]) 
+
 def load_disparity(image_path):
     return Image.open(image_path)
 
@@ -18,11 +22,14 @@ def preprocess_data(image, augment=False):
                 brightness=[0.5, 2],
                 contrast=[0.9, 1.1],
                 hue=[0.9, 1.1]),
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD)
+
         ])
     else:
         data_transforms = transforms.Compose([
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD)
         ])
 
     return data_transforms(image)
@@ -56,7 +63,8 @@ class KITTILoader(Dataset):
             left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
             right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
 
-            data = np.ascontiguousarray(data,dtype=np.float32)/256
+            data = np.ascontiguousarray(data, dtype=np.float32)/256
+            data = np.negative(data)
             data = data[y1:y1 + th, x1:x1 + tw]
 
         else:
