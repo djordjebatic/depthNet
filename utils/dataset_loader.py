@@ -6,7 +6,7 @@ import numpy as np
 def check_image(filename):
     return filetype.is_image(filename)
 
-def load_addresses(root = 'FlyingThings3D_subset' ):
+def load_data(root = 'FlyingThings3D_subset' ):
 
 
     left_images_train = []

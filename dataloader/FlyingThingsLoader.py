@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 from utils.python_pfm import readPFM
-from utils.address_loader import load_addresses
 from PIL import Image
 from torchvision import transforms
 from torch.utils.data import Dataset
@@ -33,7 +32,7 @@ def preprocess_data(image, augment=False):
     return data_transforms(image)
 
 
-class StereoDataset(Dataset):
+class FlyingThingsDataloader(Dataset):
 
     def __init__(self, left_images, right_images, left_disparities, train):
         self.left_images = left_images
@@ -83,23 +82,3 @@ class StereoDataset(Dataset):
 
     def __len__(self):
         return len(self.left_images)
-
-
-def get_data_loaders(batch_size, num_workers, root = 'FlyingThings3D_subset'):
-    'Loads the train and val datasets'
-    left_imgs_train, right_imgs_train, left_disps_train, left_imgs_val, right_imgs_val, left_disps_val = load_addresses(root)
-
-    print(len(left_disps_train), len(left_imgs_train))
-
-    train_loader = torch.utils.data.DataLoader(
-        StereoDataset(left_imgs_train[:12000], right_imgs_train[:12000], left_disps_train[:12000], True),
-        batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, drop_last=False
-    )
-
-    val_loader = torch.utils.data.DataLoader(
-        StereoDataset(left_imgs_val, right_imgs_val, left_disps_val, False),
-        batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True, drop_last=False
-    )
-
-    print('Data loaded.')
-    return train_loader, val_loader

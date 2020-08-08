@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,9 +9,10 @@ import numpy as numpy
 from dataloader import FlyingThingsLoader as FLY
 from dataloader.KITTILoader import KITTILoader
 from model.basic import DispNetSimple
-from model.loss import multiscale_loss
+#from model.loss import multiscale_loss
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
+from utils import dataset_loader
 import time
 
 import warnings
@@ -72,9 +76,10 @@ def model_init(dual_gpu=False):
     return model
 
 
-def calculate_loss(output, disp_true, weights = None):
-    pr1, pr2, pr3, pr4, pr5, pr6 = output
+def calculate_loss(output, disp_true, weights = None, mask=None):
 
+    loss = 0
+    pr1, pr2, pr3, pr4, pr5, pr6 = output
     # predict flow upsampling
     out_size = pr1.shape[-2:]
     out1 = pr1
@@ -84,25 +89,35 @@ def calculate_loss(output, disp_true, weights = None):
     out5 = F.interpolate(pr5, out_size, mode='bilinear')
     out6 = F.interpolate(pr6, out_size, mode='bilinear')
 
-    # squeeze
-    out1 = torch.squeeze(out1, 1)
-    out2 = torch.squeeze(out2, 1)
-    out3 = torch.squeeze(out3, 1)
-    out4 = torch.squeeze(out4, 1)
-    out5 = torch.squeeze(out5, 1)
-    out6 = torch.squeeze(out6, 1)
+    #kitti mode
+    if mask != None:
+        # apply masks
+        out1 = torch.squeeze(out1, 1)[mask]
+        out2 = torch.squeeze(out2, 1)[mask]
+        out3 = torch.squeeze(out3, 1)[mask]
+        out4 = torch.squeeze(out4, 1)[mask]
+        out5 = torch.squeeze(out5, 1)[mask]
+        out6 = torch.squeeze(out6, 1)[mask]
+
+        disp_true = disp_true[mask]
+
+    else:
+        out1 = torch.squeeze(out1, 1)
+        out2 = torch.squeeze(out2, 1)
+        out3 = torch.squeeze(out3, 1)
+        out4 = torch.squeeze(out4, 1)
+        out5 = torch.squeeze(out5, 1)
+        out6 = torch.squeeze(out6, 1)
 
     # weights
     if weights is None:
         weights = [0.0025, 0.005, 0.01, 0.02, 0.08, 0.32]
 
     outs = (out6, out5, out4, out3, out2, out1)
-    loss = 0
     for w, o in zip(weights, outs):
         loss_delta = w * F.smooth_l1_loss(o, disp_true, size_average=True)
         loss += loss_delta
 
-    # loss = F.smooth_l1_loss(output1[mask], disp_true[mask], size_average=True)
 
     return loss
 
@@ -129,14 +144,10 @@ def train_sample(model, train_loader):
             mask = disp_true > 0
             mask.detach_()
 
-            print(disp_true.shape)
-            print(mask.shape)
-
             optimizer.zero_grad()
             output = model(input_cat)
-            print(output.shape)
 
-            loss = multiscale_loss(output, disp_true)
+            loss = calculate_loss(output, disp_true, mask=mask)
 
             total_train_loss += loss
 
