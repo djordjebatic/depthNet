@@ -1,5 +1,7 @@
+import torch
 import numpy as np
 from utils.python_pfm import readPFM
+from utils.address_loader import load_addresses
 from PIL import Image
 from torchvision import transforms
 from torch.utils.data import Dataset
@@ -7,8 +9,8 @@ import random
 
 
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
-IMAGENET_STD = np.array([0.229, 0.224, 0.225]) 
-    
+IMAGENET_STD = np.array([0.229, 0.224, 0.225])
+
 def load_disparity(file_path):
     pfm, _ = readPFM(file_path)
     data = np.ascontiguousarray(pfm, dtype=np.float32)
@@ -30,7 +32,8 @@ def preprocess_data(image, augment=False):
 
     return data_transforms(image)
 
-class FlyingThingsDataloader(Dataset):
+
+class StereoDataset(Dataset):
 
     def __init__(self, left_images, right_images, left_disparities, train):
         self.left_images = left_images
@@ -46,7 +49,7 @@ class FlyingThingsDataloader(Dataset):
 
         left_img = load_image(left_image_path)
         right_img = load_image(right_image_path)
-        
+
         w, h = left_img.size
 
         data = load_disparity(disparity_path)
@@ -72,9 +75,6 @@ class FlyingThingsDataloader(Dataset):
             right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
 
             data = data[y1:y1 + th, x1:x1 + tw]
-            
-            #data = Image.fromarray(data.astype('uint8'), 'RGB').resize((tw, th))
-            #data = np.array(data)
 
         left_img = preprocess_data(left_img)
         right_img = preprocess_data(right_img)
@@ -84,3 +84,22 @@ class FlyingThingsDataloader(Dataset):
     def __len__(self):
         return len(self.left_images)
 
+
+def get_data_loaders(batch_size, num_workers, root = 'FlyingThings3D_subset'):
+    'Loads the train and val datasets'
+    left_imgs_train, right_imgs_train, left_disps_train, left_imgs_val, right_imgs_val, left_disps_val = load_addresses(root)
+
+    print(len(left_disps_train), len(left_imgs_train))
+
+    train_loader = torch.utils.data.DataLoader(
+        StereoDataset(left_imgs_train[:12000], right_imgs_train[:12000], left_disps_train[:12000], True),
+        batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, drop_last=False
+    )
+
+    val_loader = torch.utils.data.DataLoader(
+        StereoDataset(left_imgs_val, right_imgs_val, left_disps_val, False),
+        batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True, drop_last=False
+    )
+
+    print('Data loaded.')
+    return train_loader, val_loader
