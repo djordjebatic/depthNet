@@ -44,7 +44,7 @@ def make_data_loaders(root = 'FlyingThings3D_subset'):
         )
 
         val_loader = torch.utils.data.DataLoader(
-            FLY.FlyingThingsDataloader(left_imgs_val[:1000], right_imgs_val[1000], left_disps_val[1000], False),
+            FLY.FlyingThingsDataloader(left_imgs_val[:1000], right_imgs_val[:1000], left_disps_val[:1000], False),
             batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
         )
 
@@ -77,21 +77,26 @@ def get_metrics(model, loader):
 
     rmse = 0
     mrae = 0
+    #total_epe = 0
 
     for batch_idx, (imgL, imgR, disp_gt) in enumerate(loader):
         imgL = imgL.to(DEVICE)
         imgR = imgR.to(DEVICE)
-        disp_true = dispL.to(DEVICE)
+        disp_gt = disp_gt.to(DEVICE)
         input_cat = torch.cat((imgL, imgR), 1)
-        disp_our = model(input_cat)
-        disp_our = torch.squeeze(disp_our)
+        
+        with torch.no_grad():
+            disp_our = model(input_cat)
+            disp_our = torch.squeeze(disp_our)
+            #total_epe += torch.norm(disp_our-disp_gt,p=2,dim=1).mean()
 
+        disp_our = disp_our.cpu().numpy()
+        disp_gt = disp_gt.cpu().numpy()
         rmse += root_mean_square_error(disp_our, disp_gt)
         mrae += relative_absolute_error(disp_our, disp_gt)
 
     rmse /= len(loader)
     mrae /= len(loader)
-
     return rmse, mrae
 
 if __name__ == '__main__':
@@ -107,4 +112,4 @@ if __name__ == '__main__':
     print("Model loaded.")
 
     rmse, mrae = get_metrics(model, val_loader)
-    print("RMSE:", rmse, "\nMRAE:", mrae)
+    print("RMSE: {}\nMRAE: {}".format(rmse, mrae))

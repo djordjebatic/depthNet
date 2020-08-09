@@ -69,7 +69,7 @@ def relative_absolute_error(output, target):
     output_sq = np.ravel(output)
     target_sq = np.ravel(target)
 
-    return np.mean(np.abs(output_sq - target_sq) / output_sq)
+    return np.mean(np.abs(output_sq - target_sq) / np.abs(output_sq))
 
 
 if __name__ == '__main__':

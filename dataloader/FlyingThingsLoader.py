@@ -62,6 +62,7 @@ class FlyingThingsDataloader(Dataset):
             left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
             right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
 
+            #data = np.negative(data)
             data = data[y1:y1 + th, x1:x1 + tw]
 
         else:

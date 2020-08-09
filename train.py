@@ -46,7 +46,7 @@ def make_data_loaders(root = 'FlyingThings3D_subset'):
         )
 
         val_loader = torch.utils.data.DataLoader(
-            FLY.FlyingThingsDataloader(left_imgs_val[:1000], right_imgs_val[1000], left_disps_val[1000], False),
+            FLY.FlyingThingsDataloader(left_imgs_val[:1000], right_imgs_val[:1000], left_disps_val[:1000], False),
             batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
         )
 

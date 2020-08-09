@@ -20,8 +20,8 @@ def preprocess_data(image, augment=False):
         data_transforms = transforms.Compose([
             transforms.ColorJitter(
                 brightness=[0.5, 2],
-                contrast=[0.9, 1.1],
-                hue=[0.9, 1.1]),
+                contrast=[0.8, 1.2],
+                hue=[0.8, 1.2]),
             transforms.ToTensor(),
             transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD)
 
@@ -63,7 +63,8 @@ class KITTILoader(Dataset):
             left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
             right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
 
-            data = np.ascontiguousarray(data, dtype=np.float32)
+            data = np.ascontiguousarray(data, dtype=np.float32)/256
+            data = np.negative(data)
             data = data[y1:y1 + th, x1:x1 + tw]
 
         else:
