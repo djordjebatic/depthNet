@@ -9,24 +9,22 @@ import numpy as numpy
 from dataloader import FlyingThingsLoader as FLY
 from dataloader.KITTILoader import KITTILoader
 from model.basic import DispNetSimple
+from model.DispNetV2 import DispNetV2
 #from model.loss import multiscale_loss
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 from utils import dataset_loader
 import time
-
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+import copy
 
 
-DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+DEVICE = torch.device("cuda")
 MAX_SUMMARY_IMAGES = 4
 LR = 3e-4
 EPOCHS = 300
 BATCH_SIZE = 16
 NUM_WORKERS = 8
-LOSS_WEIGHTS = [[0.32, 0.16, 0.08, 0.04, 0.02, 0.01, 0.005]]
-MODEL_PTH = 'saved_models/kitti_'
+MODEL_PTH = 'saved_models/encoderv2_'
 
 
 assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
@@ -41,14 +39,14 @@ def make_data_loaders(root = 'FlyingThings3D_subset'):
 
     print(len(left_disps_train), len(left_imgs_train))
 
-    if root == 'FlyingThings3D_subset':
+    if root == 'FlyingThings3D_subset' or root == 'driving':
         train_loader = torch.utils.data.DataLoader(
             FLY.FlyingThingsDataloader(left_imgs_train[:12000], right_imgs_train[:12000], left_disps_train[:12000], True),
             batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
         )
 
         val_loader = torch.utils.data.DataLoader(
-            FLY.FlyingThingsDataloader(left_imgs_val, right_imgs_val, left_disps_val, False),
+            FLY.FlyingThingsDataloader(left_imgs_val[:1000], right_imgs_val[1000], left_disps_val[1000], False),
             batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True, drop_last=False
         )
 
@@ -67,8 +65,11 @@ def make_data_loaders(root = 'FlyingThings3D_subset'):
     return train_loader, val_loader
 
 
-def model_init(dual_gpu=False):
-    model = DispNetSimple().to(DEVICE)
+def model_init(dual_gpu=False, v2=False):
+    if v2:
+        model = DispNetV2().to(DEVICE)
+    else:
+        model = DispNetSimple().to(DEVICE)
     if dual_gpu:
         model = nn.DataParallel(model)
     print('Model initialized.')
@@ -119,13 +120,11 @@ def calculate_loss(output, disp_true, weights = None, mask=None):
         loss += loss_delta
 
 
-    return loss
+    return loss #* 0.0002 * (out1 != 0).sum()
 
-def train_sample(model, train_loader):
+def main(model, train_loader, val_loader):
 
-    total_train_loss = 0
 
-    model.train()
     start = time.time()
 
     writer = SummaryWriter()
@@ -133,35 +132,59 @@ def train_sample(model, train_loader):
     optimizer = optim.Adam(model.parameters(), lr=LR)
     print('Training loop started.')
 
+
     for epoch in range(1, EPOCHS):
-        for batch_idx, (imgL, imgR, dispL) in enumerate(train_loader):
+        print("Epoch {}/{}\n----------".format(epoch, EPOCHS))
+        for phase in ['train', 'val']:
+            min_loss = 10000
+            total_loss = 0
 
-            imgL = Variable(torch.FloatTensor(imgL).to(DEVICE), requires_grad=False)
-            imgR = Variable(torch.FloatTensor(imgR).to(DEVICE), requires_grad=False)
-            disp_true = Variable(torch.FloatTensor(dispL).to(DEVICE), requires_grad=False)
-            input_cat = Variable(torch.cat((imgL, imgR), 1), requires_grad=False)
+            if phase == 'train':
+                model.train()  # Set model to training mode
+                loader = train_loader
+            else:
+                model.eval()   # Set model to evaluate mode
+                loader = val_loader
 
-            mask = disp_true > 0
-            mask.detach_()
+            for batch_idx, (imgL, imgR, dispL) in enumerate(loader):
 
-            optimizer.zero_grad()
-            output = model(input_cat)
+                imgL = Variable(torch.FloatTensor(imgL).to(DEVICE))
+                imgR = Variable(torch.FloatTensor(imgR).to(DEVICE))
+                disp_true = Variable(torch.FloatTensor(dispL).to(DEVICE))
+                input_cat = Variable(torch.cat((imgL, imgR), 1))
+                
+                #mask = (disp_true > 0)
+                #mask.detach_()
+                #mask = None
 
-            loss = calculate_loss(output, disp_true, mask=mask)
+                optimizer.zero_grad()
 
-            total_train_loss += loss
+                with torch.set_grad_enabled(phase == 'train'):
+                    output = model(input_cat)
 
-            loss.backward()
-            optimizer.step()            
+                    if phase == 'train':
+                        loss = calculate_loss(output, disp_true, mask=mask)
+                        loss.backward()
+                        optimizer.step()     
 
-        torch.save(model.state_dict(), MODEL_PTH + str(epoch) + '_dispnet.pth')
-        total_train_loss += loss
-        writer.add_scalar('loss/train', loss, epoch)
-        print('Epoch {} loss: {:.3f} Time elapsed: {:.3f}'.format(epoch, loss, time.time() - start))
+                    else:
+                        disp = torch.squeeze(output, 1)
+                        loss = F.smooth_l1_loss(disp_true, disp)
+     
 
-    print('Total loss is: {:.3f}'.format(total_train_loss/EPOCHS))
+                total_loss += loss
+
+            if phase=='val' and total_loss < min_loss: 
+                min_loss = total_loss
+                torch.save(model.state_dict(), MODEL_PTH + str(epoch) + '_dispnet.pth')
+
+            writer.add_scalar('loss/' + phase, loss, epoch)
+            print('{} epoch {} loss: {:.3f}'.format(phase, epoch, loss))
+
+        print('\n')
+    print('time elapsed: {:.3f}'.format(time.time() - start))
+    #print('Total loss is: {:.3f}'.format(total_train_loss/EPOCHS))
     del model, imgL, imgR, disp_true
-    print('Total time elapsed: {:.3f}'.format(time.time() - start))
 
     writer.close()
 
@@ -202,13 +225,14 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     #root = 'SAMPLE_BATCH'
-    train_loader, val_loader = make_data_loaders("KITTI")
+    train_loader, val_loader = make_data_loaders('driving')
 
-    state_dict_filename = "saved_models/46_dispnet.pth"
-    state_dict = torch.load(state_dict_filename)
-    model = WrappedModel()
-    model.load_state_dict(state_dict)
+    model = model_init(dual_gpu=True, v2=True)
+    #state_dict_filename = "saved_models/46_dispnet.pth"
+    #state_dict = torch.load(state_dict_filename)
+    #model.load_state_dict(state_dict)
     print("Model loaded.")
 
-    train_sample(model, train_loader)
+    #model = model_init()
+    main(model, train_loader, val_loader)
     #validation_simple(model, val_loader)

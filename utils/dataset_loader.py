@@ -55,6 +55,24 @@ def load_data(root = 'FlyingThings3D_subset' ):
         right_images_test = ['data_scene_flow/training/' + right_folder + image for image in val_images]
         left_disps_test = ['data_scene_flow/training/' + disp_left + image for image in val_images]
         
+    elif root == 'driving':
+
+        left_folder  = 'Driving_dataset/frames_cleanpass/15mm_focallength/scene_backwards/fast/left/'
+        right_folder = 'Driving_dataset/frames_cleanpass/15mm_focallength/scene_backwards/fast/right/'
+        disp_left = 'Driving_dataset/disparity/15mm_focallength/scene_backwards/fast/left/'
+
+        images = [img for img in os.listdir(left_folder) if check_image(left_folder + img)]
+
+        np.random.shuffle(images)
+        training_images = images[:284]
+        val_images = images[284:]
+
+        left_images_train = [left_folder + image for image in training_images]
+        right_images_train = [right_folder + image for image in training_images]
+        left_disps_train = [disp_left + image.split(".")[0] + '.pfm' for image in training_images]
+        left_images_test = [left_folder + image for image in val_images]
+        right_images_test = [right_folder + image for image in val_images]
+        left_disps_test = [disp_left + image.split(".")[0] + '.pfm' for image in val_images]
     else:
         return "WRONG ROOT FOLDER NAME"
 
@@ -62,4 +80,4 @@ def load_data(root = 'FlyingThings3D_subset' ):
 
 
 if __name__ == '__main__':
-    load_data('KITTI')
+    load_data('driving')
