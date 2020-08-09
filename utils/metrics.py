@@ -41,10 +41,6 @@ def get_GT_explained(depth, depth_true, K):
 
         distance_list[i] = dist[0,0]
 
-    # plt.figure()
-    # plt.hist(distance_list, bins=20)
-    # plt.show()
-
     N_all = len(distance_list)
 
     GT_explained = []
@@ -63,15 +59,15 @@ def get_GT_explained(depth, depth_true, K):
     return GT_explained, D_list
 
 def root_mean_square_error(output, target):
-    output_sq = np.squeeze(output)
-    target_sq = np.squeeze(target)
+    output_sq = np.ravel(output)
+    target_sq = np.ravel(target)
 
     mse = np.mean(np.square(output_sq - target_sq))
     return np.sqrt(mse)
 
 def relative_absolute_error(output, target):
-    output_sq = np.squeeze(output)
-    target_sq = np.squeeze(target)
+    output_sq = np.ravel(output)
+    target_sq = np.ravel(target)
 
     return np.mean(np.abs(output_sq - target_sq) / output_sq)
 
