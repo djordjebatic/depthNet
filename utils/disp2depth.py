@@ -1,5 +1,5 @@
 import numpy as np
-from python_pfm import readPFM
+from utils.python_pfm import readPFM
 import matplotlib.pyplot as plt
 # import PyPNG
 
