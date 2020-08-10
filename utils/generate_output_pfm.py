@@ -24,9 +24,9 @@ class WrappedModel(nn.Module):
         return self.module(x)
 
 
-def load_model(model_path):
+def load_model(model_path, model_class):
     print("Loading model")
-    model = WrappedModel().to(device)
+    model = model_class().to(device)
     state_dict = torch.load(model_path)
     model.load_state_dict(state_dict)
     print("Model loaded")
@@ -48,10 +48,8 @@ def infer(model, imgL, imgR):
     return pred_disp
 
 
-def generate_output(epoch, img_idx):
-
-    model_path = "saved_models/" + epoch + "_dispnet.pth"
-    model = load_model(model_path)
+def generate_output(model_path, model_class, img_idx):
+    model = load_model(model_path, model_class)
 
     left_img_path = "FlyingThings3D_subset/val/image_clean/left/" + img_idx + ".png"
     right_img_path = "FlyingThings3D_subset/val/image_clean/right/" + img_idx + ".png"
@@ -70,17 +68,11 @@ def generate_output(epoch, img_idx):
 
     print('time = %.2f' %(time.time() - start_time))
 
-    f = plt.figure()
-    f.add_subplot(2,1,1)
-    plt.imshow(np.asarray(imgL))
-    f.add_subplot(2,1,2)
-    plt.imshow(pred_disp)
-    plt.show()
     print('total time = %.2f' %(time.time() - start_time))
 
-epoch = "46"
+model_path, model_class = "saved_models/8_9_57_dispnet.pth", DispNetSimple
 img_idx = "0000799"
-generate_output(epoch, img_idx)
+generate_output(model_path, model_class, img_idx)
 pred_disp, _ = readPFM(img_idx + ".pfm")
 
 print('min: %f, max: %f, mean: %f' % (np.min(pred_disp), np.max(pred_disp), np.mean(pred_disp)))

@@ -69,12 +69,12 @@ def relative_absolute_error(output, target):
     output_sq = np.ravel(output)
     target_sq = np.ravel(target)
 
-    return np.mean(np.abs(output_sq - target_sq) / output_sq)
+    return np.mean(np.abs(output_sq - target_sq) / np.abs(output_sq))
 
 
 if __name__ == '__main__':
     path_gt = 'metrics_data/0000799_gt.pfm'
-    path_our = 'metrics_data/0000799_our.pfm'
+    path_our = 'metrics_data/0000799_our_8_9_57.pfm'
 
     disp_gt, scale = readPFM(path_gt)
     disp_our, scale = readPFM(path_our)
@@ -86,16 +86,18 @@ if __name__ == '__main__':
         m = metric(depth_our, depth_gt)
         print(metric_name, '=', m)
 
-    values = [disp_our, disp_gt, depth_our, depth_gt]
-    names = ['Estimated Disparity', 'GT Disparity', 'Estimated Depth', 'GT Depth']
-    for d, name in zip(values, names):
-        plt.figure()
+    # values = [disp_our, disp_gt, depth_our, depth_gt]
+    # names = ['Estimated Disparity', 'GT Disparity', 'Estimated Depth', 'GT Depth']
+    plt.figure()
+    values = [disp_our, disp_gt]
+    names = ['Estimated Disparity', 'GT Disparity']
+    for i, d, name in zip([0,2],values, names):
+        plt.subplot(2,2,i+1)
         plt.imshow(d)
         plt.title(name)
 
+        plt.subplot(2,2,i+2)
         d_flat = np.ravel(d)
-
-        plt.figure()
         plt.hist(d_flat, bins=100)
         plt.title(name + ' histogram')
 
@@ -106,5 +108,6 @@ if __name__ == '__main__':
     gt_exp, d_list = get_GT_explained(depth_our, depth_gt, K_default)
     plt.figure()
     plt.plot(d_list, gt_exp)
+    plt.title('GT explained')
     plt.xscale('log')
     plt.show()
