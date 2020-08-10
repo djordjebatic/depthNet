@@ -16,13 +16,13 @@ import time
 import copy
 
 
-DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+DEVICE = torch.device("cuda:1") if torch.cuda.is_available() else torch.device("cpu")
 MAX_SUMMARY_IMAGES = 4
 LR = 3e-4
 EPOCHS = 300
 BATCH_SIZE = 16
 NUM_WORKERS = 8
-MODEL_PTH = 'saved_models/encoderv2_'
+MODEL_PTH = 'saved_models/8_9_'
 
 
 assert MAX_SUMMARY_IMAGES <= BATCH_SIZE
@@ -84,7 +84,7 @@ def get_metrics(model, loader):
         imgR = imgR.to(DEVICE)
         disp_gt = disp_gt.to(DEVICE)
         input_cat = torch.cat((imgL, imgR), 1)
-        
+
         with torch.no_grad():
             disp_our = model(input_cat)
             disp_our = torch.squeeze(disp_our)
@@ -104,12 +104,16 @@ if __name__ == '__main__':
 
     train_loader, val_loader = make_data_loaders()
 
-    state_dict_filename = "saved_models/46_dispnet.pth"
+    # state_dict_filename = "saved_models/46_dispnet.pth"
+    # state_dict_filename = "saved_models/47_dispnet.pth"
+    # model = WrappedModel().to(DEVICE)
+
+    # state_dict_filename = "saved_models/8_9_57_dispnet.pth"
     state_dict = torch.load(state_dict_filename)
 
-    model = WrappedModel().to(DEVICE)
+    model = DispNetSimple().to(DEVICE)
     model.load_state_dict(state_dict)
-    print("Model loaded.")
+    print("Model "+state_dict_filename+" loaded.")
 
     rmse, mrae = get_metrics(model, val_loader)
     print("RMSE: {}\nMRAE: {}".format(rmse, mrae))
