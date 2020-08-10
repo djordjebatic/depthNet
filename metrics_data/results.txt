@@ -1,0 +1,11 @@
+Model saved_models/8_9_57_dispnet.pth
+RMSE: 9.234979633301023
+MRAE: 0.12284224811527464
+
+Model saved_models/46_dispnet.pth
+RMSE: 10.038836562444294
+MRAE: 0.5111126786186582
+
+Model saved_models/47_dispnet.pth
+RMSE: 11.289442732220603
+MRAE: 0.13745104284986617
