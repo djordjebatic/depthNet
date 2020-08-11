@@ -73,8 +73,8 @@ def relative_absolute_error(output, target):
 
 
 if __name__ == '__main__':
-    path_gt = 'metrics_data/0000799_gt.pfm'
-    path_our = 'metrics_data/0000799_our_8_9_57.pfm'
+    path_gt = '../metrics_data/0000799_gt.pfm'
+    path_our = '../metrics_data/0000799_our_8_9_57.pfm'
 
     disp_gt, scale = readPFM(path_gt)
     disp_our, scale = readPFM(path_our)
